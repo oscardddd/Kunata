@@ -1,0 +1,4 @@
+First time setup, run source torch.sh
+Once the conda environment is set up correctly, run conda activate torch
+
+To enforce global bandwidth limit, run bash global_traffic.sh, you can change the bandwidth inside the file
