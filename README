@@ -2,3 +2,69 @@ First time setup, run source torch.sh
 Once the conda environment is set up correctly, run conda activate torch
 
 To enforce global bandwidth limit, run bash global_traffic.sh, you can change the bandwidth inside the file
+
+
+-------How to run torchrun on each machine?-----
+Before you run, run ifconfig to get something like this:
+
+enp1s0f0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 128.105.145.33  netmask 255.255.252.0  broadcast 128.105.147.255
+        inet6 fe80::ce46:d6ff:fe59:2822  prefixlen 64  scopeid 0x20<link>
+        ether cc:46:d6:59:28:22  txqueuelen 1000  (Ethernet)
+        RX packets 495379  bytes 99884352 (99.8 MB)
+        RX errors 0  dropped 0  overruns 1  frame 0
+        TX packets 10404  bytes 4303009 (4.3 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+        device memory 0xc6a00000-c6afffff  
+
+enp6s0f0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet6 fe80::92e2:baff:feb5:350  prefixlen 64  scopeid 0x20<link>
+        ether 90:e2:ba:b5:03:50  txqueuelen 1000  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 30  bytes 2292 (2.2 KB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 1941  bytes 4133916 (4.1 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 1941  bytes 4133916 (4.1 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+vlan1204: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.10.1.2  netmask 255.255.255.0  broadcast 10.10.1.255
+        inet6 fe80::26:a2ff:fe24:e7df  prefixlen 64  scopeid 0x20<link>
+        ether 02:26:a2:24:e7:df  txqueuelen 1000  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 15  bytes 1146 (1.1 KB)
+
+In this case, set the GLOO interface to be vlan1204 like this export GLOO_SOCKET_IFNAME=vlan1204 (because this vlan1204 is bounded to the physical interface enp6s0f0)
+Do the same thing to all the nodes 2345
+
+After this, run 
+
+torchrun --nnodes=2 --nproc_per_node=1 --node_rank=0 --master_addr=10.10.5.1 --master_port=29500 dp.py --model 'base' --duration 10
+torchrun --nnodes=2 --nproc_per_node=1 --node_rank=1 --master_addr=10.10.5.1 --master_port=29500 dp.py --model 'base' --duration 10
+
+
+Or in the case of 4 nodes
+
+torchrun --nnodes=4 --nproc_per_node=1 --node_rank=0 --master_addr=10.10.2.2  --master_port=29500 dp_fourmachine.py --model 'base' --batch_size 32 --iterations 20 --num_microbatches 8
+
+torchrun --nnodes=4 --nproc_per_node=1 --node_rank=1 --master_addr=10.10.2.2  --master_port=29500 dp_fourmachine.py --model 'base' --batch_size 32 --iterations 20 --num_microbatches 8
+
+torchrun --nnodes=4 --nproc_per_node=1 --node_rank=2 --master_addr=10.10.2.2  --master_port=29500 dp_fourmachine.py --model 'base' --batch_size 32 --iterations 20 --num_microbatches 8
+
+torchrun --nnodes=4 --nproc_per_node=1 --node_rank=3 --master_addr=10.10.2.2  --master_port=29500 dp_fourmachine.py --model 'base' --batch_size 32 --iterations 20 --num_microbatches 8
+
+replace master_addr with the master node's address. 
+
+-------How do you measure the data transfer rate -----
+
+run ./monitor.py on another terminal, it will record something to a json file. 
+
+
