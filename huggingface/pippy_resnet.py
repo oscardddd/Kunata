@@ -44,7 +44,7 @@ def run(args):
 
     # Split points
     split_spec = {
-        'layer2': SplitPoint.BEGINNING,
+        'layer3': SplitPoint.BEGINNING,
     }
 
     # Create pipeline

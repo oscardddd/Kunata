@@ -1,4 +1,4 @@
 #!/bin/bash
 
 # Run tcpdump for 30 seconds and save the output to capture_l1.pcap
-timeout 30 sudo tcpdump -i vlan1204 -w ./capture_l1.pcap
+timeout 30 sudo tcpdump -i vlan1216 -w ./capture.pcap

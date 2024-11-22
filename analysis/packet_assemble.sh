@@ -1,7 +1,7 @@
-tshark -r ./capture.pcap -T fields \
+tshark -r ./captured/capture_l2.pcap -T fields \
   -e frame.time_epoch \
   -e frame.len \
   -E header=y \
   -E separator=, \
   -E quote=n \
-  -E occurrence=f > ./analyis/packet_info2.csv
+  -E occurrence=f > ./packet_info_l2.csv

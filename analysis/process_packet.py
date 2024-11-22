@@ -23,7 +23,7 @@ def process_packet_data(csv_file, output_file):
     df.dropna(subset=['frame.len'], inplace=True)
 
     # Sort the DataFrame by 'frame.time_epoch'
-    df.sort_values('frame.time_epoch', inplace=True)
+    # df.sort_values('frame.time_epoch', inplace=True)
 
     # Initialize variables
     start_time = df['frame.time_epoch'].iloc[0]
@@ -53,6 +53,8 @@ def process_packet_data(csv_file, output_file):
             time_diff = next_time - current_time
 
             if time_diff >= 1.0:
+                # print(time_diff)
+
                 # Append accumulated size to data_sizes (convert bytes to MB)
                 data_size_mb = size_accumulator / (1024 * 1024)
                 time_slots.append(current_time)
@@ -62,10 +64,12 @@ def process_packet_data(csv_file, output_file):
                 size_accumulator = 0.0
 
                 # For the time between current_time and next_time, mark data size as 0
-                gap_times = np.arange(current_time + 1.0, next_time, 1.0)
-                for gap_time in gap_times:
-                    time_slots.append(gap_time)
-                    data_sizes.append(0.0)
+                
+                
+                time_slots.append(next_time)
+                data_sizes.append(0.0)
+
+                print("###",current_time, next_time)
         else:
             # Last packet
             # Append accumulated size to data_sizes (convert bytes to MB)
@@ -91,8 +95,8 @@ def process_packet_data(csv_file, output_file):
     return output_df
 
 # Usage example
-csv_file = 'packet_info2.csv'         # Replace with your CSV file path
-output_file = 'processed_data.csv'   # Output CSV file
+csv_file = 'packet_info_l2.csv'         # Replace with your CSV file path
+output_file = 'processed_data_l2.csv'   # Output CSV file
 output_df = process_packet_data(csv_file, output_file)
 
 # Print the results
