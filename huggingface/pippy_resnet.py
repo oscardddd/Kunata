@@ -3,13 +3,16 @@
 
 import argparse
 import os
+import time
+from datetime import datetime
+from zoneinfo import ZoneInfo  # Python 3.9+
 
 import torch
 import torch.distributed as dist
 from torch.distributed.pipelining import pipeline, ScheduleGPipe, SplitPoint
 
 import torchvision.models as models
-import time
+
 def get_number_of_params(model):
     return sum(p.numel() for p in model.parameters())
 
@@ -17,6 +20,13 @@ def generate_inputs_for_resnet(batch_size, device):
     input_size = (batch_size, 3, 224, 224)
     inputs = torch.randn(input_size, device=device)
     return (inputs,)
+
+def get_current_time():
+    # Define the timezone (e.g., 'Asia/Shanghai' for CST)
+    timezone = ZoneInfo('Asia/Shanghai')  # Adjust as needed
+    now = datetime.now(timezone)
+    formatted_time = now.strftime("%b %d, %Y %H:%M:%S.%f %Z")
+    return formatted_time
 
 def run(args):
     # Model configs
@@ -29,19 +39,14 @@ def run(args):
     
     print(resnet)
 
-
     # Example microbatch inputs
     example_mb = generate_inputs_for_resnet(args.batch_size // args.chunks, args.device)
 
     # Split points
-    # split_spec = {
-    #     'layer2': SplitPoint.BEGINNING,
-    #     'layer3': SplitPoint.BEGINNING,
-    #     'layer4': SplitPoint.BEGINNING,
-    # }
     split_spec = {
-        'layer3': SplitPoint.BEGINNING,
+        'layer2': SplitPoint.BEGINNING,
     }
+
     # Create pipeline
     pipe = pipeline(
         resnet,
@@ -56,11 +61,6 @@ def run(args):
     params_in_millions = get_number_of_params(smod) / 1e6
     print(f"Pipeline stage {args.rank} {params_in_millions:.2f}M params")
 
-    # Optional: List parameters for debugging
-    # print(f"Stage {args.rank} parameters:")
-    # for name, param in smod.named_parameters():
-    #     print(f" - {name}: {param.numel()} params")
-
     # Create schedule runtime
     stage = pipe.build_stage(
         args.rank,
@@ -73,15 +73,20 @@ def run(args):
     # Full batch inputs
     inputs = generate_inputs_for_resnet(args.batch_size, args.device)
 
-    for i in range(100):
+    for i in range(1000):
         print(f"rank {args.rank}, iteration {i+1}")
         # Run
         if args.rank == 0:
             schedule.step(*inputs)
-            time.sleep(2)
         else:
             schedule.step()
-            time.sleep(2)
+        
+        # Sleep for 2 seconds
+        time.sleep(2)
+        
+        # Get and print the current timestamp
+        current_time = get_current_time()
+        print(f"{current_time} - Rank {args.rank} completed iteration {i+1}")
 
     dist.barrier()
     dist.destroy_process_group()

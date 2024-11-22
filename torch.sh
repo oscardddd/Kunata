@@ -1,9 +1,9 @@
 
 echo "Installing Anaconda"
-sudo wget -P ./ https://repo.anaconda.com/archive/Anaconda3-2024.02-1-Linux-x86_64.sh
+sudo wget -P ../ https://repo.anaconda.com/archive/Anaconda3-2024.02-1-Linux-x86_64.sh
 sudo chmod +x ./Anaconda3-2024.02-1-Linux-x86_64.sh
-sudo bash ./Anaconda3-2024.02-1-Linux-x86_64.sh -b -p ./anaconda3
-export PATH="./anaconda3/bin:$PATH"
+sudo bash ../Anaconda3-2024.02-1-Linux-x86_64.sh -b -p ../anaconda3
+export PATH="../anaconda3/bin:$PATH"
 echo 'export PATH="./anaconda3/bin:$PATH"' >> ~/.bashrc
 sudo chmod a+rw -R ./anaconda3
 
