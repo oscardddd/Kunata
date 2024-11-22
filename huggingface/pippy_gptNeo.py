@@ -34,7 +34,7 @@ def run(args):
     # Input configs
     example_inputs = generate_inputs_for_model(
         model_class, gptneo, model_name, args.batch_size, args.device)
-
+    
     # Annotate split points
     layers_per_rank = (gptneo.config.num_layers + args.world_size - 1) // args.world_size
     print(f"decoders_per_rank = {layers_per_rank}")
@@ -46,9 +46,7 @@ def run(args):
     # Create pipeline
     pipe = pipeline(
         gptneo,
-        num_chunks=args.chunks,
-        example_args=(),
-        example_kwargs=example_inputs,
+        mb_args=(example_inputs, ),
         split_spec=split_spec,
     )
 
@@ -85,7 +83,7 @@ if __name__ == "__main__":
     parser.add_argument('--master_port', type=str, default=os.getenv('MASTER_PORT', '29500'))
     parser.add_argument('--schedule', type=str, default="FillDrain")
     parser.add_argument('--cuda', type=int, default=int(torch.cuda.is_available()))
-    parser.add_argument("--chunks", type=int, default=4)
+    parser.add_argument("--chunks", type=int, default=1)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--batches', type=int, default=1)
 

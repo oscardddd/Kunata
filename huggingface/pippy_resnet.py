@@ -1,7 +1,5 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates
-
 # Minimum effort to run this example:
-# $ torchrun --nproc-per-node 4 pippy_bert.py
+# $ torchrun --nproc-per-node 4 pippy_resnet50.py
 
 import argparse
 import os
@@ -10,49 +8,56 @@ import torch
 import torch.distributed as dist
 from torch.distributed.pipelining import pipeline, ScheduleGPipe, SplitPoint
 
-from transformers import BertModel, BertConfig
+import torchvision.models as models
+import time
+def get_number_of_params(model):
+    return sum(p.numel() for p in model.parameters())
 
-from hf_utils import generate_inputs_for_model, get_number_of_params
-
+def generate_inputs_for_resnet(batch_size, device):
+    input_size = (batch_size, 3, 224, 224)
+    inputs = torch.randn(input_size, device=device)
+    return (inputs,)
 
 def run(args):
     # Model configs
-    config = BertConfig()
     print("Using device:", args.device)
 
     # Create model
-    model_class = BertModel
-    model_name = "BertModel"
-    bert = model_class(config)
-    bert.to(args.device)
-    bert.eval()
-    if args.rank == 0:
-        print(bert.config)
-        print(f"Total number of params = {get_number_of_params(bert) // 10 ** 6}M")
-        print(bert)
+    resnet = models.resnet50()
+    resnet.to(args.device)
+    resnet.eval()
+    
+    print(resnet)
+
 
     # Example microbatch inputs
-    example_mb = generate_inputs_for_model(
-        model_class, bert, model_name, args.batch_size // args.chunks, args.device)
+    example_mb = generate_inputs_for_resnet(args.batch_size // args.chunks, args.device)
 
     # Split points
-    layers_per_rank = bert.config.num_hidden_layers // args.world_size
     split_spec = {
-        f"encoder.layer.{i * layers_per_rank}": SplitPoint.BEGINNING
-        for i in range(1, args.world_size)
+        'layer2': SplitPoint.BEGINNING,
+        'layer3': SplitPoint.BEGINNING,
+        'layer4': SplitPoint.BEGINNING,
     }
 
     # Create pipeline
     pipe = pipeline(
-        bert,
-        mb_args=(),
-        mb_kwargs=example_mb,
+        resnet,
+        mb_args=example_mb,
         split_spec=split_spec,
     )
 
     assert pipe.num_stages == args.world_size, f"nstages = {pipe.num_stages} nranks = {args.world_size}"
     smod = pipe.get_stage_module(args.rank)
-    print(f"Pipeline stage {args.rank} {get_number_of_params(smod) // 10 ** 6}M params")
+
+    # Calculate and print parameter counts
+    params_in_millions = get_number_of_params(smod) / 1e6
+    print(f"Pipeline stage {args.rank} {params_in_millions:.2f}M params")
+
+    # Optional: List parameters for debugging
+    # print(f"Stage {args.rank} parameters:")
+    # for name, param in smod.named_parameters():
+    #     print(f" - {name}: {param.numel()} params")
 
     # Create schedule runtime
     stage = pipe.build_stage(
@@ -63,22 +68,22 @@ def run(args):
     # Attach to a schedule
     schedule = ScheduleGPipe(stage, args.chunks)
 
-    # Full batch inputs as in single-worker case
-    inputs = generate_inputs_for_model(
-        model_class, bert, model_name, args.batch_size, args.device)
+    # Full batch inputs
+    inputs = generate_inputs_for_resnet(args.batch_size, args.device)
 
     for i in range(5):
-        print(f"rank {args.rank}, interation {i+1}")
-    # Run
+        print(f"rank {args.rank}, iteration {i+1}")
+        # Run
         if args.rank == 0:
-            schedule.step(**inputs)
+            schedule.step(*inputs)
+            time.sleep(2)
         else:
-            out = schedule.step()
+            schedule.step()
+            time.sleep(2)
 
     dist.barrier()
     dist.destroy_process_group()
     print(f"Rank {args.rank} completes")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

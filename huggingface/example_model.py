@@ -21,15 +21,21 @@ def run(args):
     if args.rank == 0:
         print(fnet.config)
         print(f"Total number of params = {get_number_of_params(fnet) // 10 ** 6}M")
-        print(fnet)
+        # print(fnet)
 
     
     # Input configs
     example_inputs = generate_inputs_for_model(
         model_class, fnet, model_name, args.batch_size, args.device)
     input_ids = example_inputs["input_ids"]
-    print("######## The example inputs looks like?", input_ids)
 
+    num_microbatch = args.chunks
+    example_inputs = torch.rand(32 // num_microbatch, input_ids.size(1)).to(args.device)
+    example_inputs = input_ids
+
+    print("##### dimention of example inputs: ", example_inputs.size())
+    example_inputs = example_inputs.to(torch.int64).to(args.device)
+    print("###### example tensor", example_inputs.dtype)
     # Split things
     layers_per_rank = fnet.config.num_hidden_layers // args.world_size
     split_spec = {
@@ -39,9 +45,10 @@ def run(args):
 
     pipe = pipeline(
         fnet,
-        mb_args=(input_ids, ),
+        mb_args=(example_inputs, ),
         split_spec=split_spec,
     )
+    print("### pipe")
     assert pipe.num_stages == args.world_size, f"nstages = {pipe.num_stages} nranks = {args.world_size}"
     smod = pipe.get_stage_module(args.rank)
     print(f"Pipeline stage {args.rank} {get_number_of_params(smod) // 10 ** 6}M params")
@@ -51,7 +58,7 @@ def run(args):
         pipe,
         args.rank,
         num_stages=4,
-        input_args=(input_ids,),
+        input_args=(example_inputs,),
         device=args.device,
     )
 
@@ -79,7 +86,7 @@ def main():
     parser.add_argument('--master_port', type=str, default=os.getenv('MASTER_PORT', '29500'))
     parser.add_argument('--schedule', type=str, default="FillDrain")
     parser.add_argument('--cuda', type=int, default=int(torch.cuda.is_available()))
-    parser.add_argument("--chunks", type=int, default=4)
+    parser.add_argument("--chunks", type=int, default=1)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--batches', type=int, default=1)
     args = parser.parse_args()

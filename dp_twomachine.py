@@ -66,6 +66,7 @@ def benchmark_model(model, input_tensor, num_iterations, num_layers, num_microba
     else:
         device = torch.device("cpu")
 
+    print("####### input tensor size", input_tensor.size())
     microbatch_size = input_tensor.size(0) // num_microbatch  # Calculate microbatch size
 
     # 这个是microbatch下的 tensor size

@@ -36,6 +36,10 @@ def run(args):
         model_class, convbert, model_name, args.batch_size, args.device)
     input_ids = example_inputs["input_ids"]
 
+    print("######## The example inputs looks like?", input_ids.size())
+    example_inputs = torch.rand(args.chunks, input_ids.size(1)).to(args.device)
+
+
     # Split points
     # The first rank takes embedding
     split_spec = {}
@@ -50,8 +54,7 @@ def run(args):
     # Create pipeline
     pipe = pipeline(
         convbert,
-        num_chunks=args.chunks,
-        example_args=(input_ids, ),
+        mb_args=(example_inputs, ),
         split_spec=split_spec,
     )
 
@@ -63,6 +66,8 @@ def run(args):
     stage = PipelineStage(
         pipe,
         args.rank,
+        num_stages=args.chunks,
+        input_args=(example_inputs,),
         device=args.device,
     )
 
