@@ -10,8 +10,8 @@ sudo chmod a+rw -R ./anaconda3
 echo "Creating conda environment"
 conda create --name torch python=3.10 -y
 eval "$(conda shell.bash hook)"
-conda activate torch
+conda activate torch24
 
 echo "Installing Python packages"
-pip3 install torch
+pip3 install torch==2.4.1
 pip3 install numpy
