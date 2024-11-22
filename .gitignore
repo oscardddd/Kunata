@@ -1,0 +1,5 @@
+./analysis/captured
+
+# ignore ALL .log files
+*.log
+*.png
