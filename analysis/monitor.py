@@ -67,4 +67,4 @@ def get_transfer_rate(interface="vlan1216", interval=0.5, duration=800):
 
 # Run the function with your desired parameters
 if __name__ == "__main__":
-    get_transfer_rate(interface="vlan1216", interval=0.1, duration=30)
+    get_transfer_rate(interface="vlan1216", interval=1, duration=30)
