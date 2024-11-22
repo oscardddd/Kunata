@@ -12,6 +12,6 @@ conda create --name torch python=3.10 -y
 eval "$(conda shell.bash hook)"
 conda activate torch24
 
-echo "Installing Python packages"
-pip3 install torch==2.4.1
+echo "Installing Pytorch 2.4.1"
+pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cpu
 pip3 install numpy

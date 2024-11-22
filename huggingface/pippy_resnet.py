@@ -34,12 +34,14 @@ def run(args):
     example_mb = generate_inputs_for_resnet(args.batch_size // args.chunks, args.device)
 
     # Split points
+    # split_spec = {
+    #     'layer2': SplitPoint.BEGINNING,
+    #     'layer3': SplitPoint.BEGINNING,
+    #     'layer4': SplitPoint.BEGINNING,
+    # }
     split_spec = {
-        'layer2': SplitPoint.BEGINNING,
         'layer3': SplitPoint.BEGINNING,
-        'layer4': SplitPoint.BEGINNING,
     }
-
     # Create pipeline
     pipe = pipeline(
         resnet,
@@ -71,7 +73,7 @@ def run(args):
     # Full batch inputs
     inputs = generate_inputs_for_resnet(args.batch_size, args.device)
 
-    for i in range(5):
+    for i in range(100):
         print(f"rank {args.rank}, iteration {i+1}")
         # Run
         if args.rank == 0:
@@ -87,10 +89,8 @@ def run(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--world_size', type=int, default=int(os.getenv("WORLD_SIZE", 4)))
+    parser.add_argument('--world_size', type=int, default=2)
     parser.add_argument('--rank', type=int, default=int(os.getenv("RANK", -1)))
-    parser.add_argument('--master_addr', type=str, default=os.getenv('MASTER_ADDR', 'localhost'))
-    parser.add_argument('--master_port', type=str, default=os.getenv('MASTER_PORT', '29500'))
     parser.add_argument('--schedule', type=str, default="FillDrain")
     parser.add_argument('--cuda', type=int, default=int(torch.cuda.is_available()))
     parser.add_argument("--chunks", type=int, default=4)
