@@ -50,10 +50,6 @@ def run(args, model):
         if rank == 0:
             # Rank 0 feeds the input and target
             schedule.step(input_data)
-        elif rank == 1:
-            schedule.step()
-        elif rank == 2:
-            schedule.step()
         else:
             losses = []
             schedule.step(target=target, losses=losses)
