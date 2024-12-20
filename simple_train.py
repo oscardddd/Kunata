@@ -1,11 +1,10 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates
 # Minimal effort to run this code:
-# $ torchrun --nproc-per-node 3 example_train.py
+# $ torchrun --nproc-per-node 3 simple_train.py
 
 import os
 import torch
-from torch.distributed.pipelining import SplitPoint, ScheduleGPipe, pipeline, PipelineStage
-import torch.distributed as dist
+from torch.distributed.pipelining import pipeline, SplitPoint, ScheduleGPipe, PipelineStage
 
 in_dim = 512
 layer_dims = [512, 1024, 256]
@@ -46,6 +45,15 @@ class MyNetwork(torch.nn.Module):
         return self.output_proj(x)
 
 
+# To run a distributed training job, we must launch the script in multiple
+# different processes. We are using `torchrun` to do so in this example.
+# `torchrun` defines two environment variables: `RANK` and `WORLD_SIZE`,
+# which represent the index of this process within the set of processes and
+# the total number of processes, respectively.
+#
+# To learn more about `torchrun`, see
+# https://pytorch.org/docs/stable/elastic/run.html
+
 torch.manual_seed(0)
 rank = int(os.environ["RANK"])
 world_size = int(os.environ["WORLD_SIZE"])
@@ -56,12 +64,10 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-# Initialize distributed environment
-dist.init_process_group(rank=rank, world_size=world_size)
-
-# Create the model and pipeline
+# Create the model
 mn = MyNetwork().to(device)
-
+for name, module in mn.named_modules():
+        print(name, ":", module)
 split_spec = {
     "layer0": SplitPoint.END,
     "layer1": SplitPoint.END,
@@ -70,8 +76,8 @@ split_spec = {
 batch_size = 32
 chunks = 4
 example_mb = torch.randn(batch_size // chunks, in_dim, device=device)
-
 pipe = pipeline(mn, mb_args=(example_mb,), split_spec=split_spec)
+
 
 if rank == 0:
     print(" pipe ".center(80, "*"))
@@ -83,57 +89,41 @@ if rank == 0:
     print(" stage 2 ".center(80, "*"))
     print(pipe.split_gm.submod_2)
 
-# Build stage
-stage = pipe.build_stage(rank, device)
-loss_fn = torch.nn.MSELoss(reduction="mean")
-schedule = ScheduleGPipe(stage, chunks, loss_fn=loss_fn)
 
-# Create an optimizer on each rank that updates only the parameters local to that rank's pipeline stage.
-optimizer = torch.optim.SGD(stage.submod.parameters(), lr=0.01)
+# Initialize distributed environment
+import torch.distributed as dist
+
+dist.init_process_group(rank=rank, world_size=world_size)
+
+# Pipeline stage is our main pipeline runtime. It takes in the pipe object,
+# the rank of this process, and the device.
+stage = pipe.build_stage(rank, device)
+
+
+# Define a loss function
+loss_fn=torch.nn.MSELoss(reduction="sum")
+
+# Attach to a schedule
+schedule = ScheduleGPipe(stage, chunks, loss_fn=loss_fn)
 
 # Input data
 x = torch.randn(batch_size, in_dim, device=device)
 target = torch.randn(batch_size, out_dim, device=device)
 
-# Initial warmup/test
-for i in range(5):
-    if rank == 0:
-        schedule.step(x)
-    elif rank == world_size - 1:
-        losses = []
-        output = schedule.step(target=target, losses=losses)
-    else:
-        schedule.step()
+# Run the pipeline with input `x`. Divide the batch into 4 micro-batches
+# and run them in parallel on the pipeline
+if rank == 0:
+    schedule.step(x)
+elif rank == world_size - 1:
+    losses = []
+    output = schedule.step(target=target, losses=losses)
+else:
+    schedule.step()
 
-    # After the schedule step completes, gradients should be ready for optimizer step
-
-    if rank == world_size - 1:
-        # Run the original code and get the output for comparison
-        reference_output = mn(x)
-        # Compare numerics of pipeline and original model
-        torch.testing.assert_close(output, reference_output)
-        print(f"Iteration {i}, Loss of microbatches: {losses}")
-
-# Actual training iterations
-iterations = 30
-for j in range(iterations):
-    optimizer.zero_grad()
-    if rank == 0:
-        schedule.step(x)
-    elif rank == world_size - 1:
-        losses = []
-        output = schedule.step(target=target, losses=losses)
-    else:
-        schedule.step()
-
-    # Update parameters
-    if rank == world_size - 1:
-        current_loss = sum(losses).item() 
-        # # Run the original code and get the output for comparison
-        # reference_output = mn(x)
-        # torch.testing.assert_close(output, reference_output)
-        print(f"Rank {rank}, iteration {j}, Losses: {current_loss}\n")
-    optimizer.step()
-
-
-print(" Pipeline parallel model ran successfully with parameter updates! ".center(80, "*"))
+if rank == world_size - 1:
+    # Run the original code and get the output for comparison
+    reference_output = mn(x)
+    # Compare numerics of pipeline and original model
+    torch.testing.assert_close(output, reference_output)
+    print(f"Loss of microbatches: {losses}")
+    print(" Pipeline parallel model ran successfully! ".center(80, "*"))

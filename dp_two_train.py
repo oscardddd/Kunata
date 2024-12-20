@@ -5,7 +5,8 @@ import time
 import argparse
 import os
 from torch.distributed.pipelining  import pipeline, SplitPoint, ScheduleGPipe, PipelineStage
-
+# Minimum effort to run this example:
+# $ torchrun --nproc-per-node 2 dp_two_train.py
 torch.set_num_threads(20)
 
 # Transformer Block definition
@@ -85,12 +86,8 @@ def train_model(model, input_tensor, target, num_iterations, num_layers, num_mic
     # Create the pipeline object
     pipe = pipeline(model, mb_args=(example_input,), split_spec=split_spec)
     print(f"Rank {rank}: Pipeline created")
-
-    # Initialize distributed environment
     dist.init_process_group(backend='gloo', rank=rank, world_size=world_size)
-
-    # Define the pipeline stage
-    stage = PipelineStage(pipe, rank, num_stages=world_size, input_args=(example_input,), device=device)
+    stage = pipe.build_stage(rank, device)
 
     # Define the loss function
     loss_fn = nn.CrossEntropyLoss()
@@ -100,14 +97,13 @@ def train_model(model, input_tensor, target, num_iterations, num_layers, num_mic
     print(f"Rank {rank}: Schedule created")
 
     # Get the local submodule
-    local_submodule = getattr(pipe.split_gm, f"submod_{rank}")
+    # local_submodule = getattr(pipe.split_gm, f"submod_{rank}")
 
     # Create an optimizer for the local parameters
-    optimizer = torch.optim.SGD(local_submodule.parameters(), lr=0.01)
+    # optimizer = torch.optim.SGD(local_submodule.parameters(), lr=0.01)
 
     # Training loop
     for iteration in range(num_iterations):
-        optimizer.zero_grad()
         if rank == 0:
             schedule.step(input_tensor)
         else:
@@ -116,9 +112,6 @@ def train_model(model, input_tensor, target, num_iterations, num_layers, num_mic
             losses = []
             output = schedule.step(target=target, losses=losses)
             print(f"Iteration {iteration}, Loss: {losses}")
-    
-
-        optimizer.step()
 
         if rank == world_size - 1:
             print(f"Iteration {iteration} completed.")

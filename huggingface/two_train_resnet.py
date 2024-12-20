@@ -1,5 +1,5 @@
 # Minimum effort to run this example:
-# $ torchrun --nproc-per-node 2 pippy_resnet.py
+# $ torchrun --nproc-per-node 4 two_train_resnet.py
 
 import argparse
 import os
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         args.device = torch.device("cpu")
 
     # Init process group
-    backend = "nccl" if args.cuda else "gloo"
+    backend = "gloo"
     dist.init_process_group(
         backend=backend,
         rank=args.rank,

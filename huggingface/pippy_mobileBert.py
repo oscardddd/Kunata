@@ -45,8 +45,7 @@ def run(args):
     # Create pipeline
     pipe = pipeline(
         mobilebert,
-        num_chunks=args.chunks,
-        example_args=(input_ids, ),
+        mb_args=(input_ids, ),
         split_spec=split_spec,
     )
 
@@ -55,11 +54,7 @@ def run(args):
     print(f"Pipeline stage {args.rank} {get_number_of_params(smod) // 10 ** 6}M params")
 
     # Create schedule runtime
-    stage = PipelineStage(
-        pipe,
-        args.rank,
-        device=args.device,
-    )
+    stage = pipe.build_stage(rank, device)
 
     # Attach to a schedule
     schedule = ScheduleGPipe(stage, args.chunks)
