@@ -44,7 +44,7 @@ def run(args, model):
     optimizer = optim.SGD(local_params, lr=0.001)
 
     # Simple training iteration
-    for i in range(50):
+    for i in range(1000):
         print(f"iteration {i}")  
         optimizer.zero_grad()
         if rank == 0:
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     parser.add_argument('--schedule', type=str, default="FillDrain")
     parser.add_argument('--cuda', type=int, default=int(torch.cuda.is_available()))
     parser.add_argument("--chunks", type=int, default=4)
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--batches', type=int, default=1)
 
     args = parser.parse_args()
