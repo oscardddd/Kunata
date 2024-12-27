@@ -9,15 +9,10 @@ import argparse
 # Minimum effort to run this example:
 # $ torchrun --nproc-per-node 2 train.py
 from torchvision.models import resnet50
-def run(args, model):
-    # model.train()
-    # for name, module in model.named_modules():
-    #     print(name, ":", module)
 
-    # Example splitting function: Suppose we split after layer2.
-    # Identify layers by printing model and checking names of submodules.
+def run(args, model):
     split_spec = {
-    "layer1": SplitPoint.END,
+        "layer1": SplitPoint.END,
     }
     rank = int(os.environ["RANK"])  # Get the rank from environment
     world_size = int(os.environ["WORLD_SIZE"])  # Get the world size from environment
@@ -41,7 +36,8 @@ def run(args, model):
 
     # Create local optimizer (only for parameters on this stage)
     local_params = list(stage.submod.parameters())
-    optimizer = optim.SGD(local_params, lr=0.001)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)
+    start_time = time.time()  # Record initial start time
 
     # Simple training iteration
     for i in range(1000):
@@ -50,19 +46,25 @@ def run(args, model):
         if rank == 0:
             # Rank 0 feeds the input and target
             schedule.step(input_data)
-        elif rank == 1:
-            schedule.step()
-        elif rank == 2:
-            schedule.step()
-        else:
-            losses = []
-            schedule.step(target=target, losses=losses)
+            end_time = time.time()
+            elapsed = end_time - start_time
+            print(f"Rank {rank}: Iteration {i} stage 0 completed in {elapsed:.4f} seconds")
             optimizer.step()
 
-        if rank == world_size - 1:
-            print("Training step completed on last stage.")
-            current_loss = losses[0].item()
-            print(f"Rank {rank}: Loss at iteration {i} = {current_loss}")
+        elif rank == world_size - 1:
+            losses = []
+            schedule.step(target=target, losses=losses)
+            
+            print(len(losses))
+            end_time = time.time()
+            elapsed = end_time - start_time
+            optimizer.step()
+            combined_loss = sum(losses) / len(losses)
+            print(f"Rank {rank}: Loss at iteration {i} = {combined_loss}")
+            print(f"Rank {rank}: iteration {i} final stage completed in {elapsed:.4f} seconds")
+
+
+
 
 
 if __name__ == "__main__":
@@ -79,17 +81,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
     if args.cuda:
         dev_id = args.rank % torch.cuda.device_count()
         args.device = torch.device(f"cuda:{dev_id}")
     else:
         args.device = torch.device("cpu")
     
-
+    rank = int(os.environ["RANK"])
     device = torch.device(f"cuda:{rank}" if torch.cuda.is_available() else "cpu")
     print("load the model")
 
-    model = resnet50(pretrained=True)
+    model = resnet50()
 
     run(args, model)
