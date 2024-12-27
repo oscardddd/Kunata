@@ -7,12 +7,16 @@ import os
 import time
 import argparse
 # Minimum effort to run this example:
-# $ torchrun --nproc-per-node 2 train.py
+# $ torchrun --nproc-per-node 4 4train.py
 from torchvision.models import resnet50
 
 def run(args, model):
     split_spec = {
         "layer1": SplitPoint.END,
+        "layer2": SplitPoint.END,
+        "layer3": SplitPoint.END,
+
+
     }
     rank = int(os.environ["RANK"])  # Get the rank from environment
     world_size = int(os.environ["WORLD_SIZE"])  # Get the world size from environment
@@ -48,7 +52,7 @@ def run(args, model):
             schedule.step(input_data)
             end_time = time.time()
             elapsed = end_time - start_time
-            print(f"Rank {rank}: Iteration {i} stage 0 completed in {elapsed:.4f} seconds")
+            print(f"Rank {rank}: Iteration {i} completed at {elapsed:.4f} seconds")
             timers.append(end_time)
             optimizer.step()
             
@@ -63,7 +67,14 @@ def run(args, model):
             optimizer.step()
             combined_loss = sum(losses) / len(losses)
             print(f"Rank {rank}: Loss at iteration {i} = {combined_loss}")
-            print(f"Rank {rank}: iteration {i} final stage completed in {elapsed:.4f} seconds")
+            print(f"Rank {rank}: iteration {i} final stage completed at {elapsed:.4f} seconds")
+        else:
+            schedule.step()
+            end_time = time.time()
+            elapsed = end_time - start_time
+            print(f"Rank {rank}: iteration {i} completed at {elapsed:.4f} seconds")
+            optimizer.step()
+
     print(timers)
 
 
