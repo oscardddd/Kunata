@@ -46,6 +46,10 @@ def main():
 
         if rank == 0:
             print(f"[rank 0] step {step}, loss = {loss.item():.4f}")
+        elif rank == 1:
+            print(f"[rank 1] step {step}, loss = {loss.item():.4f}")
+
+        
 
     dist.destroy_process_group()
 
