@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 """
 torchrun --standalone --nproc-per-node 2 test1.py
 """
@@ -28,9 +29,10 @@ def main():
     world_size = int(os.environ["WORLD_SIZE"])
     rank       = int(os.environ["RANK"])
 
+    print(f"rank {rank} started")
     # 2️⃣ 根据环境选择设备 & 后端
     use_cuda = torch.cuda.is_available()
-    device   = torch.device(f"cuda:{local_rank}" if use_cuda else "cpu")
+    device   = torch.device("cpu")
     backend  = "nccl" if use_cuda else "gloo"
 
     # 3️⃣ 初始化进程组
@@ -47,14 +49,18 @@ def main():
     inputs = torch.randn(20, 10, device=device)
     labels = torch.randn(20,  5, device=device)
 
-    optimizer.zero_grad()
-    outputs = ddp_model(inputs)
-    loss    = loss_fn(outputs, labels)
-    loss.backward()
-    optimizer.step()
+    for i in range(10):
+        optimizer.zero_grad()
+        outputs = ddp_model(inputs)
+        loss    = loss_fn(outputs, labels)
+        loss.backward()
+        optimizer.step()
 
-    if rank == 0:
-        print(f"[rank 0] Finished one step, loss={loss.item():.4f}")
+        if rank == 0:
+            print(f"[rank 0] Finished iteration {i}, loss={loss.item():.4f}")
+        elif rank == 1:
+            print(f"[rank 1] Finished iteration {i}, loss={loss.item():.4f}")
+
 
     # 6️⃣ 结束
     dist.destroy_process_group()
