@@ -43,7 +43,8 @@ vlan1204: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX packets 15  bytes 1146 (1.1 KB)
 
 In this case, set the GLOO interface to be vlan1204 like this export GLOO_SOCKET_IFNAME=vlan1204 (because this vlan1204 is bounded to the physical interface enp6s0f0)
-Do the same thing to all the nodes 2345
+
+Do the same thing to all the nodes 2345!
 
 After this, run 
 

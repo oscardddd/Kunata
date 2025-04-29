@@ -1,7 +1,8 @@
 import time
 import pandas as pd
 
-def get_transfer_rate(interface="vlan1216", interval=0.5, duration=800):
+def get_transfer_rate(interface=None, interval=0.5, duration=800):
+    interface = input("what's the interface?")
     rx_path = f"/sys/class/net/{interface}/statistics/rx_bytes"
     tx_path = f"/sys/class/net/{interface}/statistics/tx_bytes"
     
@@ -67,4 +68,4 @@ def get_transfer_rate(interface="vlan1216", interval=0.5, duration=800):
 
 # Run the function with your desired parameters
 if __name__ == "__main__":
-    get_transfer_rate(interface="vlan1216", interval=1, duration=30)
+    get_transfer_rate(interface=None, interval=1, duration=30)
