@@ -69,3 +69,16 @@ replace master_addr with the master node's address.
 run ./monitor.py on another terminal, it will record something to a json file. 
 
 
+####### 如何运行三种pipeline parallelism
+
+### run tensor
+torchrun --nnodes=2 --nproc_per_node=1 --node_rank=0 --rdzv_backend=c10d --rdzv_id=100 --rdzv_endpoint=128.105.144.81:29400 gpt2_tensor.py
+
+torchrun --nnodes=2 --nproc_per_node=1 --node_rank=1 --rdzv_backend=c10d --rdzv_id=100 --rdzv_endpoint=128.105.144.81:29400 gpt2_tensor.py
+
+
+
+## run ddp
+torchrun --nnodes=2 --nproc_per_node=1 --node_rank=0 --rdzv_backend=c10d --rdzv_id=100 --rdzv_endpoint=128.105.144.81:29400 gpt2.py
+
+torchrun --nnodes=2 --nproc_per_node=1 --node_rank=1 --rdzv_backend=c10d --rdzv_id=100 --rdzv_endpoint=128.105.144.81:29400 gpt2.py

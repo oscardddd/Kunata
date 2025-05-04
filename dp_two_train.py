@@ -134,7 +134,7 @@ def main():
     parser.add_argument("--iterations", type=int, required=True, help="Number of iterations")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size for input tensor.")
     parser.add_argument("--seq_len", type=int, default=512, help="Sequence length for input tensor.")
-    parser.add_argument("--num_microbatches", type=int, default=1, help="Number of microbatches for pipeline parallelism.")
+    parser.add_argument("--num_microbatches", type=int, default=2, help="Number of microbatches for pipeline parallelism.")
 
     args = parser.parse_args()
 
