@@ -20,15 +20,26 @@ def main():
     backend  = "nccl" if use_cuda else "gloo"
     dist.init_process_group(backend)
 
-    # 3️⃣ load Qwen‑3‑0.6B
+
     model_name = "Qwen/Qwen3-0.6B"
-    config = AutoConfig.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+
+    # 👇 先加载 config，然后手动补字段
+    config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+
+    # Qwen3 特有：必须显式设置 attention 实现，否则 transformers 默认是 None
+    if not hasattr(config, "attn_implementation") or config.attn_implementation is None:
+        config.attn_implementation = "sdpa"  # or "flash_attention_2" if installed
+
+    # 👇 再加载模型，确保 config 是你手动处理过的
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         config=config,
-        torch_dtype=torch.float16 if use_cuda else torch.float32
+        trust_remote_code=True,
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     ).to(device)
+
 
     ddp_model = DDP(model, device_ids=[local_rank] if use_cuda else None)
 
