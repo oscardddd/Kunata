@@ -15,6 +15,7 @@ echo "Installing Python packages"
 pip3 install --upgrade pip
 # conda install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 cpuonly -c pytorch -y
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip3 install transformers==4.51.3
 pip3 install numpy
 
 

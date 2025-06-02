@@ -25,7 +25,7 @@ from __future__ import annotations
 import os, socket, torch, torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
-
+import time
 # ---------------------------------------------------------------------------
 # Utility: pretty log
 # ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ def main():
     labels = torch.randint(0, vocab_size, (batch_size, seq_len), dtype=torch.long, device=device)
 
     optimizer = torch.optim.AdamW(ddp_model.parameters(), lr=5e-5)
-
+    start_time = time.time()
     log("start training …")
     for step in range(10):
         optimizer.zero_grad(set_to_none=True)
@@ -85,6 +85,9 @@ def main():
         if global_rank == 0:
             log(f"step {step:02d} | loss = {loss.item():.4f}")
 
+    if global_rank == 0:
+        end_time = time.time() - start_time
+        print(f"training time: {end_time}")
     dist.barrier()  # make sure all ranks finish before cleanup
     dist.destroy_process_group()
     log("training finished ✅")
