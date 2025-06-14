@@ -3,7 +3,7 @@
 # Define variables
 DEV="enp6s0f0"
 IFB_DEV="ifb0"
-TOTAL_RATE="100mbit"
+TOTAL_RATE="400mbit"
 
 # Ensure the script is run as root
 if [ "$EUID" -ne 0 ]; then

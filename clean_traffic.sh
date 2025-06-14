@@ -2,7 +2,7 @@
 
 # Define the primary network interface and associated VLAN interfaces
 PRIMARY_INTERFACE="enp6s0f0"
-VLAN_INTERFACES=("vlan1140" "vlan1148" "vlan1153" "vlan1156")
+VLAN_INTERFACES=("vlan1153" "vlan1155" "vlan1156" "vlan1157")
 
 echo "Clearing all tc rules on $PRIMARY_INTERFACE and associated VLAN interfaces..."
 

@@ -10,8 +10,13 @@ sudo chmod a+rw -R /data/anaconda3
 echo "Creating conda environment"
 conda create --name test python=3.10 -y
 eval "$(conda shell.bash hook)"
-conda activate test
+conda init bash
 
+if ! grep -Fxq "conda activate test" ~/.bashrc; then
+    echo 'conda activate test' >> ~/.bashrc
+fi
+conda activate test
+source ~/.bashrc
 echo "Installing Python packages"
 pip3 install --upgrade pip
 conda install pytorch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 cpuonly -c pytorch -y
