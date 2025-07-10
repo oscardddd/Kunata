@@ -26,7 +26,7 @@ def f1(pred, gold):
 
 
 # ──────────── model ────────────
-MODEL = "Qwen/Qwen3-0.6B"
+MODEL = "Qwen/Qwen3-1.7B-FP8"
 tok   = AutoTokenizer.from_pretrained(MODEL)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL, torch_dtype="auto", device_map="auto"

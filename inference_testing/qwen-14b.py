@@ -6,8 +6,7 @@ from collections import Counter
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from tqdm import tqdm
-
-
+import psutil
 # ──────────── metrics ────────────
 def _norm(txt: str) -> str:
     txt = re.sub(r'\b(a|an|the)\b', ' ', txt.lower())
@@ -26,9 +25,8 @@ def f1(pred, gold):
 
 
 # ──────────── model ────────────
-MODEL = "Qwen/Qwen3-235B-A22B"
-CACHE_DIR = "/mydata"
-tok   = AutoTokenizer.from_pretrained(MODEL, cache_dir=CACHE_DIR)
+MODEL = "Qwen/Qwen3-14B"
+tok   = AutoTokenizer.from_pretrained(MODEL)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL, torch_dtype="auto", device_map="auto"
 )
@@ -40,7 +38,7 @@ ds = load_dataset("parquet",
                   data_files={"dev": FILE_PATH},
                   split="dev")
 
-N = 1                        # 调试数量；改成 len(ds) 可全量
+N = 10                           # 调试数量；改成 len(ds) 可全量
 
 
 # ──────────── inference & scoring ────────────
@@ -80,6 +78,7 @@ for i, ex in enumerate(tqdm(ds.select(range(N)), desc="evaluating"), 1):
     f1_val  = f1(pred, gold)
     em_sum += em_val
     f1_sum += f1_val
+    print(f"RAM used: {psutil.Process().memory_info().rss / 1024**3:.2f} GB")
 
     # 5) 打印详情（context 只截前 400 字符，避免太长）
     print("\n" + "-"*80)

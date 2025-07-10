@@ -26,9 +26,8 @@ def f1(pred, gold):
 
 
 # ──────────── model ────────────
-MODEL = "Qwen/Qwen3-235B-A22B"
-CACHE_DIR = "/mydata"
-tok   = AutoTokenizer.from_pretrained(MODEL, cache_dir=CACHE_DIR)
+MODEL = "Qwen/Qwen3-4B"
+tok   = AutoTokenizer.from_pretrained(MODEL)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL, torch_dtype="auto", device_map="auto"
 )
@@ -40,7 +39,7 @@ ds = load_dataset("parquet",
                   data_files={"dev": FILE_PATH},
                   split="dev")
 
-N = 1                        # 调试数量；改成 len(ds) 可全量
+N = 50                            # 调试数量；改成 len(ds) 可全量
 
 
 # ──────────── inference & scoring ────────────
